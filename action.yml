@@ -1,0 +1,114 @@
+name: 'dedaub srcup action'
+description: 'A GitHub Action that uploads source code to Dedaub''s Watchdog using srcup'
+inputs:
+  name:
+    description: 'Project name'
+    required: false
+  comment:
+    description: 'Commit message' 
+    required: false
+    default: ''
+  init:
+    description: 'init project' 
+    required: false
+    default: ''
+  owner:
+    description: 'Project owner''s username'
+    required: false
+  framework:
+    description: 'Project framework'
+    required: false
+  api-key:
+    description: 'API key'
+    required: false
+  cache:
+    description: 'Use build cache'
+    required: false
+  location:
+     description: 'Project location on machine'
+     required: true
+     default: '.'
+outputs:
+  project_id:
+    description: 'project id'
+    # need to specify the extra `value` field for `composite` actions
+    value: ${{ steps.get-project-id.outputs.project_id }}
+  version_id:
+    description: 'version id'
+    # need to specify the extra `value` field for `composite` actions
+    value: ${{ steps.get-project-id.outputs.version_id }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'  
+    - name: Install pipx
+      run:  pip install pipx
+      shell: bash
+    - name: Install srcup
+      run: pipx install git+https://github.com/Dedaub/srcup#egg=srcup --force
+      shell: bash
+    - name: Check init
+      if: ${{  inputs.init!='' && inputs.init!='false' }}
+      run: |
+        echo "INPUT_INIT=--init" >> $GITHUB_ENV
+      shell: bash
+    - name: Check cache
+      if: ${{  inputs.cache!='' && inputs.cache!='false' }}
+      run: |
+        echo "INPUT_CACHE=--cache" >> $GITHUB_ENV
+      shell: bash
+    - name: Check framework
+      if: ${{ inputs.framework!='' }}
+      run: |
+        echo "INPUT_FRAMEWORK=--framework ${{ inputs.framework }}" >> $GITHUB_ENV
+      shell: bash
+    - name: Check Comment
+      if: ${{ inputs.comment!='' }}
+      run: |
+        echo "INPUT_COMMENT=--comment ${{ inputs.comment }}" >> $GITHUB_ENV
+      shell: bash
+    - name: Check Owner
+      if: ${{ inputs.owner!='' }}
+      run: |
+        echo "INPUT_OWNER=--owner-username ${{ inputs.owner }}" >> $GITHUB_ENV
+      shell: bash
+    - name: Check name
+      if: ${{  inputs.name!='' }}
+      run: |
+          echo "INPUT_NAME=--name ${{ inputs.name }}" >> $GITHUB_ENV
+      shell: bash
+    - name: Check API key
+      if: ${{  inputs.api-key!='' }}
+      run: |
+          echo "INPUT_API_KEY=--api-key ${{ inputs.api-key }}" >> $GITHUB_ENV
+      shell: bash
+    - name: Pass Inputs to Shell
+      run: |
+          echo "INPUT_LOCATION=${{ inputs.location }}" >> $GITHUB_ENV
+      shell: bash
+    - name: Install crytic
+      id: crytic-install
+      shell: bash
+      run: |
+          pipx install crytic-compile --force
+    - name: Fetch project id
+      id: get-project-id
+      run: |
+          set +e
+          result=$(srcup ${{ env.INPUT_API_KEY }} \
+                ${{ env.INPUT_FRAMEWORK }} \
+                ${{ env.INPUT_CACHE }} \
+                ${{ env.INPUT_INIT }} ${{ env.INPUT_COMMENT }} ${{ env.INPUT_OWNER }} \
+                ${{ env.INPUT_NAME }} ${{ env.INPUT_LOCATION }} | tail -n -1)
+          if [ $? -eq 0 ]; then
+              read -r project_id version_id <<< "${result}"
+              echo "project_id=$project_id"  >> $GITHUB_OUTPUT
+              echo "version_id=$version_id"  >> $GITHUB_OUTPUT
+          else
+            echo ${result}
+            exit -1
+          fi
+      shell: bash
