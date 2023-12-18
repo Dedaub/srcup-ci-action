@@ -1,6 +1,6 @@
 ## srcup-ci-action
 
-Latest version: 0.0.1
+Latest version: v0.0.1
 
 This action wraps Dedaub's [srcup](https://github.com/Dedaub/srcup) tool as a github action so that it can be easily used 
 in workflows
