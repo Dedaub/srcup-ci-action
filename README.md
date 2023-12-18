@@ -6,7 +6,7 @@ This action wraps Dedaub's [srcup](https://github.com/Dedaub/srcup) tool as a gi
 in workflows
 
 ### Usage
-See [action.yml]()
+See [action.yml](https://github.com/Dedaub/srcup-ci-action/blob/main/action.yml)
 
 ### Inputs
 
